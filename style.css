@@ -2,12 +2,21 @@ body {
   margin: 0;
   background: #87ceeb;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  height: 100vh;
 }
 
 canvas {
-  background: #fff;
+  background: #cceeff;
   border: 3px solid #000;
+}
+
+.controls {
+  margin-top: 10px;
+}
+
+button {
+  font-size: 24px;
+  padding: 15px 25px;
+  margin: 5px;
 }
