@@ -1,58 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Open World Driver</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-
-  <style>
-    body { margin: 0; overflow: hidden; }
-
-    #ui {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      color: white;
-      font-family: Arial;
-      z-index: 10;
-    }
-
-    /* MOBILE CONTROLS */
-    #controls {
-      position: absolute;
-      bottom: 20px;
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      padding: 0 20px;
-      z-index: 10;
-    }
-
-    .control-group {
-      display: flex;
-      gap: 10px;
-    }
-
-    button {
-      width: 70px;
-      height: 70px;
-      font-size: 28px;
-      border-radius: 12px;
-      border: none;
-      background: rgba(255,255,255,0.8);
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
 <div id="ui">Speed: <span id="speed">0</span></div>
 
 <div id="controls">
-  <div class="control-group">
+  <div class="group">
     <button id="left">⬅️</button>
     <button id="right">➡️</button>
   </div>
-  <div class="control-group">
+  <div class="group">
     <button id="forward">⬆️</button>
     <button id="back">⬇️</button>
   </div>
