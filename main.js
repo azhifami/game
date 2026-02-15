@@ -1,35 +1,58 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// motor
+const bikeImg = new Image();
+bikeImg.src = "bike.png"; // PNG motor
+
 const bike = {
-  x: 100,
-  y: 300,
-  width: 60,
-  height: 30,
-  velY: 0,
-  gravity: 0.8,
-  jumpPower: -12,
+  x: 150,
+  y: 200,
+  w: 80,
+  h: 40,
+  vy: 0,
+  rotation: 0,
+  rotSpeed: 0,
+  gravity: 0.7,
   onGround: false
 };
 
-// tanah
-const ground = 350;
+const ground = 320;
+
+// rintangan
+const obstacle = {
+  x: 500,
+  y: 300,
+  w: 40,
+  h: 40
+};
 
 function update() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // gravity
-  bike.velY += bike.gravity;
-  bike.y += bike.velY;
+  // gravitasi
+  bike.vy += bike.gravity;
+  bike.y += bike.vy;
+  bike.rotation += bike.rotSpeed;
 
-  // collision tanah
-  if (bike.y + bike.height >= ground) {
-    bike.y = ground - bike.height;
-    bike.velY = 0;
+  // tanah
+  if (bike.y + bike.h >= ground) {
+    bike.y = ground - bike.h;
+    bike.vy = 0;
     bike.onGround = true;
+    bike.rotSpeed *= 0.9;
   } else {
     bike.onGround = false;
+  }
+
+  // tabrakan rintangan
+  if (
+    bike.x < obstacle.x + obstacle.w &&
+    bike.x + bike.w > obstacle.x &&
+    bike.y < obstacle.y + obstacle.h &&
+    bike.y + bike.h > obstacle.y
+  ) {
+    alert("CRASH!");
+    location.reload();
   }
 
   draw();
@@ -39,31 +62,42 @@ function update() {
 function draw() {
   // tanah
   ctx.fillStyle = "green";
-  ctx.fillRect(0, ground, canvas.width, 50);
+  ctx.fillRect(0, ground, canvas.width, 80);
 
-  // motor (sementara kotak)
+  // rintangan
   ctx.fillStyle = "red";
-  ctx.fillRect(bike.x, bike.y, bike.width, bike.height);
+  ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h);
 
-  // roda
-  ctx.fillStyle = "black";
-  ctx.beginPath();
-  ctx.arc(bike.x + 10, bike.y + bike.height, 10, 0, Math.PI * 2);
-  ctx.arc(bike.x + 50, bike.y + bike.height, 10, 0, Math.PI * 2);
-  ctx.fill();
+  // motor (rotasi)
+  ctx.save();
+  ctx.translate(bike.x + bike.w/2, bike.y + bike.h/2);
+  ctx.rotate(bike.rotation);
+  ctx.drawImage(bikeImg, -bike.w/2, -bike.h/2, bike.w, bike.h);
+  ctx.restore();
 }
 
-// kontrol
+// tombol sentuh
+document.getElementById("jump").ontouchstart = () => {
+  if (bike.onGround) bike.vy = -12;
+};
+
+document.getElementById("front").ontouchstart = () => {
+  bike.rotSpeed = 0.08;
+};
+
+document.getElementById("back").ontouchstart = () => {
+  bike.rotSpeed = -0.08;
+};
+
+// keyboard
 document.addEventListener("keydown", e => {
-  if (e.code === "Space" && bike.onGround) {
-    bike.velY = bike.jumpPower;
-  }
+  if (e.code === "Space" && bike.onGround) bike.vy = -12;
+  if (e.code === "ArrowRight") bike.rotSpeed = 0.08;
+  if (e.code === "ArrowLeft") bike.rotSpeed = -0.08;
+});
+
+document.addEventListener("keyup", () => {
+  bike.rotSpeed = 0;
 });
 
 update();
-// ---------- RESIZE ----------
-window.addEventListener("resize", () => {
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-});
