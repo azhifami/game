@@ -1,106 +1,66 @@
-// ---------- SCENE ----------
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-// ---------- CAMERA ----------
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-);
+// motor
+const bike = {
+  x: 100,
+  y: 300,
+  width: 60,
+  height: 30,
+  velY: 0,
+  gravity: 0.8,
+  jumpPower: -12,
+  onGround: false
+};
 
-// ---------- RENDERER ----------
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+// tanah
+const ground = 350;
 
-// ---------- LIGHTS ----------
-scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-const sun = new THREE.DirectionalLight(0xffffff, 1);
-sun.position.set(10, 20, 10);
-scene.add(sun);
+function update() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-// ---------- GROUND ----------
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(500, 500),
-  new THREE.MeshStandardMaterial({ color: 0x444444 })
-);
-ground.rotation.x = -Math.PI / 2;
-scene.add(ground);
+  // gravity
+  bike.velY += bike.gravity;
+  bike.y += bike.velY;
 
-// ---------- CAR ----------
-const car = new THREE.Mesh(
-  new THREE.BoxGeometry(2, 1, 4),
-  new THREE.MeshStandardMaterial({ color: 0xff0000 })
-);
-car.position.y = 0.5;
-scene.add(car);
+  // collision tanah
+  if (bike.y + bike.height >= ground) {
+    bike.y = ground - bike.height;
+    bike.velY = 0;
+    bike.onGround = true;
+  } else {
+    bike.onGround = false;
+  }
 
-// ---------- BUILDINGS ----------
-for (let i = 0; i < 100; i++) {
-  const h = Math.random() * 20 + 5;
-  const building = new THREE.Mesh(
-    new THREE.BoxGeometry(5, h, 5),
-    new THREE.MeshStandardMaterial({ color: 0x888888 })
-  );
-  building.position.set(
-    Math.random() * 200 - 100,
-    h / 2,
-    Math.random() * 200 - 100
-  );
-  scene.add(building);
+  draw();
+  requestAnimationFrame(update);
 }
 
-// ---------- MOVEMENT ----------
-let speed = 0;
-let turn = 0;
+function draw() {
+  // tanah
+  ctx.fillStyle = "green";
+  ctx.fillRect(0, ground, canvas.width, 50);
 
-// ---------- BUTTON CONTROLS ----------
-function bindButton(id, onPress) {
-  const btn = document.getElementById(id);
-  btn.addEventListener("touchstart", e => {
-    e.preventDefault();
-    onPress();
-  });
-  btn.addEventListener("mousedown", onPress);
+  // motor (sementara kotak)
+  ctx.fillStyle = "red";
+  ctx.fillRect(bike.x, bike.y, bike.width, bike.height);
+
+  // roda
+  ctx.fillStyle = "black";
+  ctx.beginPath();
+  ctx.arc(bike.x + 10, bike.y + bike.height, 10, 0, Math.PI * 2);
+  ctx.arc(bike.x + 50, bike.y + bike.height, 10, 0, Math.PI * 2);
+  ctx.fill();
 }
 
-bindButton("forward", () => speed += 0.05);
-bindButton("back", () => speed -= 0.05);
-bindButton("left", () => turn = 0.04);
-bindButton("right", () => turn = -0.04);
+// kontrol
+document.addEventListener("keydown", e => {
+  if (e.code === "Space" && bike.onGround) {
+    bike.velY = bike.jumpPower;
+  }
+});
 
-document.addEventListener("touchend", () => turn = 0);
-document.addEventListener("mouseup", () => turn = 0);
-
-// ---------- ANIMATION LOOP ----------
-function animate() {
-  requestAnimationFrame(animate);
-
-  speed *= 0.97;
-  car.rotation.y += turn;
-  car.translateZ(speed);
-
-  camera.position.lerp(
-    new THREE.Vector3(
-      car.position.x,
-      car.position.y + 6,
-      car.position.z + 12
-    ),
-    0.1
-  );
-  camera.lookAt(car.position);
-
-  document.getElementById("speed").textContent =
-    Math.abs(speed * 100).toFixed(0);
-
-  renderer.render(scene, camera);
-}
-
-camera.position.set(0, 6, 12);
-animate();
-
+update();
 // ---------- RESIZE ----------
 window.addEventListener("resize", () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
