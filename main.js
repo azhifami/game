@@ -1,103 +1,173 @@
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+/**
+ * 2D DRAG RACE - PURE JAVASCRIPT EDITION
+ * Semua elemen (Canvas, Style, UI) dibuat melalui Script ini.
+ */
 
-const bikeImg = new Image();
-bikeImg.src = "bike.png"; // PNG motor
+// 1. SETUP STYLE & CANVAS SECARA DINAMIS
+const style = document.createElement('style');
+style.textContent = `
+    body { margin: 0; background: #111; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+    #ui-layer { position: absolute; top: 20px; text-align: center; pointer-events: none; }
+    .perfect { color: #00ffcc; font-weight: bold; animation: pop 0.3s; }
+    @keyframes pop { 0% { transform: scale(1.2); } 100% { transform: scale(1); } }
+`;
+document.head.appendChild(style);
 
-const bike = {
-  x: 150,
-  y: 200,
-  w: 80,
-  h: 40,
-  vy: 0,
-  rotation: 0,
-  rotSpeed: 0,
-  gravity: 0.7,
-  onGround: false
+const ui = document.createElement('div');
+ui.id = 'ui-layer';
+ui.innerHTML = '<h1 id="status">TEKAN [SPACE] UNTUK START</h1><p>Gunakan SPACE untuk Gas & Oper Gigi</p>';
+document.body.appendChild(ui);
+
+const canvas = document.createElement('canvas');
+canvas.width = 800;
+canvas.height = 400;
+canvas.style.border = "4px solid #333";
+canvas.style.background = "#222";
+document.body.appendChild(canvas);
+
+const ctx = canvas.getContext('2d');
+
+// 2. STATE GAME & VARIABEL
+let gameState = "IDLE"; // IDLE, COUNTDOWN, RACE, FINISH
+let timer = 0;
+let countdown = 3;
+const finishLine = 720;
+
+let player = {
+    x: 50, y: 180, vel: 0, rpm: 0, gear: 0, 
+    color: '#00ccff', time: 0, finished: false,
+    maxRPM: 1000
 };
 
-const ground = 320;
-
-// rintangan
-const obstacle = {
-  x: 500,
-  y: 300,
-  w: 40,
-  h: 40
+let enemy = {
+    x: 50, y: 280, vel: 0, 
+    color: '#ff3333', time: 0, finished: false
 };
 
+// 3. LOGIKA UTAMA
 function update() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+    if (gameState === "COUNTDOWN") {
+        timer++;
+        if (timer % 60 === 0) {
+            countdown--;
+            if (countdown <= 0) {
+                gameState = "RACE";
+                player.gear = 1;
+                player.startT = Date.now();
+                enemy.startT = Date.now();
+            }
+        }
+    }
 
-  // gravitasi
-  bike.vy += bike.gravity;
-  bike.y += bike.vy;
-  bike.rotation += bike.rotSpeed;
+    if (gameState === "RACE" || gameState === "FINISH") {
+        // Player Physics
+        if (!player.finished) {
+            if (player.gear > 0) {
+                player.rpm += (15 - player.gear); 
+                player.vel += (0.04 * player.gear);
+            }
+            player.vel *= 0.985; // Friction
+            player.x += player.vel;
+            if (player.rpm > player.maxRPM) player.rpm = player.maxRPM;
+            
+            if (player.x >= finishLine) {
+                player.finished = true;
+                player.time = ((Date.now() - player.startT) / 1000).toFixed(2);
+            }
+        }
 
-  // tanah
-  if (bike.y + bike.h >= ground) {
-    bike.y = ground - bike.h;
-    bike.vy = 0;
-    bike.onGround = true;
-    bike.rotSpeed *= 0.9;
-  } else {
-    bike.onGround = false;
-  }
+        // Enemy AI Physics
+        if (!enemy.finished) {
+            enemy.vel += 0.21; // Speed bot
+            enemy.vel *= 0.98;
+            enemy.x += enemy.vel;
+            if (enemy.x >= finishLine) {
+                enemy.finished = true;
+                enemy.time = ((Date.now() - enemy.startT) / 1000).toFixed(2);
+            }
+        }
 
-  // tabrakan rintangan
-  if (
-    bike.x < obstacle.x + obstacle.w &&
-    bike.x + bike.w > obstacle.x &&
-    bike.y < obstacle.y + obstacle.h &&
-    bike.y + bike.h > obstacle.y
-  ) {
-    alert("CRASH!");
-    location.reload();
-  }
+        if (player.finished && enemy.finished) {
+            gameState = "FINISH";
+            const win = player.time < enemy.time;
+            document.getElementById('status').innerHTML = win ? 
+                `<span class="perfect">MENANG! (${player.time}s)</span>` : 
+                `<span style="color:red">KALAH! (${player.time}s)</span>`;
+        }
+    }
 
-  draw();
-  requestAnimationFrame(update);
+    draw();
+    requestAnimationFrame(update);
 }
 
+// 4. LUKIS GRAFIS
 function draw() {
-  // tanah
-  ctx.fillStyle = "green";
-  ctx.fillRect(0, ground, canvas.width, 80);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // rintangan
-  ctx.fillStyle = "red";
-  ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h);
+    // Aspal & Garis Putus
+    ctx.fillStyle = "#333";
+    ctx.fillRect(0, 150, canvas.width, 200);
+    ctx.strokeStyle = "#555";
+    ctx.setLineDash([20, 20]);
+    ctx.beginPath(); ctx.moveTo(0, 250); ctx.lineTo(800, 250); ctx.stroke();
+    ctx.setLineDash([]);
 
-  // motor (rotasi)
-  ctx.save();
-  ctx.translate(bike.x + bike.w/2, bike.y + bike.h/2);
-  ctx.rotate(bike.rotation);
-  ctx.drawImage(bikeImg, -bike.w/2, -bike.h/2, bike.w, bike.h);
-  ctx.restore();
+    // Finish Line
+    ctx.fillStyle = "#f1c40f";
+    ctx.fillRect(finishLine, 150, 20, 200);
+
+    // Gambar Motor (Simple Box Sprite)
+    [player, enemy].forEach(m => {
+        ctx.fillStyle = m.color;
+        ctx.fillRect(m.x, m.y, 40, 15); // Body
+        ctx.fillStyle = "black";
+        ctx.beginPath(); ctx.arc(m.x+8, m.y+18, 6, 0, Math.PI*2); ctx.fill(); // Ban Blkg
+        ctx.beginPath(); ctx.arc(m.x+32, m.y+18, 6, 0, Math.PI*2); ctx.fill(); // Ban Dpn
+    });
+
+    // Dashboard Player
+    ctx.fillStyle = "white";
+    ctx.font = "bold 14px Arial";
+    ctx.fillText(`GEAR: ${player.gear}`, 20, 40);
+    ctx.fillText(`KM/H: ${Math.floor(player.vel * 15)}`, 20, 60);
+    
+    // Tachometer (RPM)
+    ctx.fillStyle = "#444";
+    ctx.fillRect(20, 75, 200, 15);
+    let rpmColor = player.rpm > 850 ? "#ff0000" : "#00ffcc";
+    ctx.fillStyle = rpmColor;
+    ctx.fillRect(20, 75, (player.rpm/player.maxRPM) * 200, 15);
+
+    if (gameState === "COUNTDOWN") {
+        ctx.fillStyle = "white";
+        ctx.font = "80px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(countdown, canvas.width/2, 120);
+        ctx.textAlign = "start";
+    }
 }
 
-// tombol sentuh
-document.getElementById("jump").ontouchstart = () => {
-  if (bike.onGround) bike.vy = -12;
-};
-
-document.getElementById("front").ontouchstart = () => {
-  bike.rotSpeed = 0.08;
-};
-
-document.getElementById("back").ontouchstart = () => {
-  bike.rotSpeed = -0.08;
-};
-
-// keyboard
-document.addEventListener("keydown", e => {
-  if (e.code === "Space" && bike.onGround) bike.vy = -12;
-  if (e.code === "ArrowRight") bike.rotSpeed = 0.08;
-  if (e.code === "ArrowLeft") bike.rotSpeed = -0.08;
+// 5. INPUT HANDLER
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+        if (gameState === "IDLE") {
+            gameState = "COUNTDOWN";
+            document.getElementById('status').innerText = "READY...";
+        } else if (gameState === "RACE" && player.gear < 6) {
+            // Mekanisme Shift
+            if (player.rpm > 850) {
+                player.vel += 4; // Perfect shift boost
+                document.getElementById('status').innerHTML = "<span class='perfect'>PERFECT!</span>";
+            } else {
+                player.vel += 1;
+                document.getElementById('status').innerText = "SHIFT UP";
+            }
+            player.gear++;
+            player.rpm = 350;
+        }
+    }
+    if (e.key === 'r' || e.key === 'R') location.reload();
 });
 
-document.addEventListener("keyup", () => {
-  bike.rotSpeed = 0;
-});
-
+// Jalankan Engine
 update();
